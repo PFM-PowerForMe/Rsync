@@ -1,4 +1,4 @@
-name: PFM-Custom-Container-build
+name: 'PFM-Custom-Container-Build'
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
 permissions: write-all
 
 jobs:
-  Custom-Container-build:
+  Custom-Container-Build:
     name: '容器编译'
     strategy:
       matrix:
@@ -22,6 +22,7 @@ jobs:
       image_name: ${{ steps.work_env.outputs.image_name }}
       platform_pair: ${{ steps.work_env.outputs.platform_pair }}
       arch: ${{ steps.work_env.outputs.arch }}
+      cpu_arch: ${{ steps.work_env.outputs.cpu_arch }}
     steps:
       - name: '环境变量'
         id: work_env
@@ -35,14 +36,16 @@ jobs:
           echo "arch=${platform#*/}" >> ${GITHUB_OUTPUT}
           echo "ARCH=${platform#*/}" >> ${GITHUB_ENV}
           echo "GH=${{ vars.GHCR_REPO }}/${repo,,}" >> ${GITHUB_ENV}
-          
+          echo "CPU_ARCH=$(arch)" >> ${GITHUB_ENV}
+          echo "cpu_arch=$(arch)" >> ${GITHUB_OUTPUT}
+
       - name: '检出分支'
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: workflow
           persist-credentials: false
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: '设置容器编译工具'
         uses: docker/setup-buildx-action@v3
@@ -53,7 +56,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           buildkitd-config-inline: |
             [worker.oci]
-              max-parallelism = 2
+              max-parallelism = 8
           driver-opts: |
             network=host
 
@@ -72,12 +75,27 @@ jobs:
             ${{ env.GH }}
           tags: |
             type=raw,value=latest-${{ env.ARCH }},enable=true
+          labels: |
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.description=PFM-PowerForMe container - ${{ env.IMAGE_NAME }}.
+            org.opencontainers.image.vendor=PFM
+            org.opencontainers.image.authors=PFM
+            org.opencontainers.image.licenses=MIT
+          annotations: |
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.description=PFM-PowerForMe container - ${{ env.IMAGE_NAME }}.
+            org.opencontainers.image.vendor=PFM
+            org.opencontainers.image.authors=PFM
+            org.opencontainers.image.licenses=MIT
 
       - name: '编译并发布'
         id: build
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           platforms: ${{ matrix.platform }}
+          provenance: false
           cache-from: type=registry,ref=${{ env.GH }}:latest
           cache-to: type=inline
           context: containers
@@ -100,12 +118,12 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  merge:
+  Merge-Container:
     name: '容器合并'
-    needs: Custom-Container-build
+    needs: Custom-Container-Build
     runs-on: ubuntu-latest
     env:
-      GH: ${{ vars.GHCR_REPO }}/${{ needs.Custom-Container-build.outputs.image_name }}
+      GH: ${{ vars.GHCR_REPO }}/${{ needs.Custom-Container-Build.outputs.image_name }}
     steps:
       - name: '下载 digests'
         uses: actions/download-artifact@v4
@@ -127,8 +145,15 @@ jobs:
       - name: '创建并发布多架构 manifest'
         working-directory: ${{ runner.temp }}/digests
         run: |
-          ls .
           docker buildx imagetools create \
+            --annotation "index:org.opencontainers.image.description=PFM-PowerForMe container" \
+            --annotation "index:org.opencontainers.image.authors=PFM" \
+            --annotation "index:org.opencontainers.image.vendor=PFM" \
+            --annotation "index:org.opencontainers.image.licenses=MIT" \
+            --annotation "manifest-descriptor:org.opencontainers.image.description=PFM-PowerForMe container" \
+            --annotation "manifest-descriptor:org.opencontainers.image.authors=PFM" \
+            --annotation "manifest-descriptor:org.opencontainers.image.vendor=PFM" \
+            --annotation "manifest-descriptor:org.opencontainers.image.licenses=MIT" \
             -t ${{ env.GH }}:latest \
            $(printf '${{ env.GH }}@sha256:%s ' *)
            
@@ -136,12 +161,12 @@ jobs:
         run: |
           docker buildx imagetools inspect ${{ env.GH }}:latest
 
-  clean:
+  Clean-Container:
     name: 'GHCR清理'
-    needs: [Custom-Container-build, merge]
+    needs: [Custom-Container-Build, Merge-Container]
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: ${{ needs.Custom-Container-build.outputs.image_name }}
+      IMAGE_NAME: ${{ needs.Custom-Container-Build.outputs.image_name }}
 
     steps:
       - name: '清理GHCR容器镜像'
