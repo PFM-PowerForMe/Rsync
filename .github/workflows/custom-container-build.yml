@@ -43,7 +43,7 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
         with:
-          ref: workflow
+          ref: main
           persist-credentials: false
           fetch-depth: 1
 
