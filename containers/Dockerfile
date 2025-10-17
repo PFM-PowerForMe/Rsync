@@ -9,6 +9,7 @@ RUN	chmod 600 /etc/rsyncd.secrets
 COPY	rootfs/entrypoint.nu	/usr/bin/entrypoint
 COPY	rootfs/cron/rsync-client.nu	/etc/periodic/daily/rsync
 RUN	chmod +x /usr/bin/entrypoint /etc/periodic/daily/rsync
+RUN	mkdir /data
 EXPOSE	873
 VOLUME	/data
 ENTRYPOINT	["/usr/bin/entrypoint"]
