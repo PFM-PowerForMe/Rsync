@@ -3,20 +3,7 @@
 use std *
 
 def run [max_retries: int] {
-    let sy = (
-        rsync \
-            --quiet \
-            --password-file=/etc/rsyncd.secrets \
-            --checksum \
-            --archive \
-            --recursive \
-            --delete \
-            --force \
-            --compress \
-            --bwlimit=128 \
-            container-user@"$SERVER"::rsyncd \
-            /data
-    ) | complete
+    let sy = (rsync --quiet --password-file=/etc/rsyncd.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 container-user@"$SERVER"::rsyncd /data) | complete
 
     mut retries = 0
     mut sleep_time = 15sec
