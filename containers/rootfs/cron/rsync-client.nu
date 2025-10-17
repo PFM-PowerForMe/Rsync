@@ -7,7 +7,7 @@ def run [max_retries: int] {
 
     mut retries = 0
     mut sleep_time = 15sec
-    while $retries < max_retries { 
+    while $retries < $max_retries { 
         if $sy.exit_code == 0 {
             break
             log info $sy.stdout
