@@ -6,5 +6,5 @@ def "main client" [] {
 }
 
 def main [] {
-    rsync --daemon --bwlimit=128 --no-detach
+    rsync --daemon --bwlimit=128 --no-detach --log-file=/dev/stdout
 }
