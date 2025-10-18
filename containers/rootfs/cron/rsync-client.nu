@@ -3,11 +3,10 @@
 use std *
 
 def run [max_retries: int] {
-    let sy = (rsync --quiet --password-file=/etc/rsyncd.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 container-user@$env.SERVER::rsyncd /data) | complete
-
     mut retries = 0
     mut sleep_time = 15sec
     while $retries < $max_retries { 
+        let sy = (rsync --quiet --password-file=/etc/rsyncd.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 $"container-user@($env.SERVER)::rsyncd" /data) | complete
         if $sy.exit_code == 0 {
             break
             log info $sy.stdout
