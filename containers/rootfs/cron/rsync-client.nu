@@ -6,7 +6,7 @@ def run [max_retries: int] {
     mut retries = 0
     mut sleep_time = 15sec
     while $retries < $max_retries { 
-        let sy = (rsync --quiet --password-file=/etc/rsync.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 $"container@($env.SERVER)::volume" /data) | complete
+        let sy = (rsync --quiet --password-file=/etc/rsync.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 $"container-user@($env.SERVER)::volume" /data) | complete
         if $sy.exit_code == 0 {
             break
             log info $sy.stdout
