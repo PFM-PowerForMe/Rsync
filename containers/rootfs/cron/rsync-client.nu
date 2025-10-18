@@ -8,8 +8,8 @@ def run [max_retries: int] {
     while $retries < $max_retries { 
         let sy = (rsync --quiet --password-file=/etc/rsync.secrets --checksum --archive --recursive --delete --force --compress --bwlimit=128 $"container-user@($env.SERVER)::volume" /data) | complete
         if $sy.exit_code == 0 {
-            break
             log info $sy.stdout
+            break
         };
         log error $sy.stderr
         log warning $"($retries)/16 Retrying after ($sleep_time) ..."
@@ -21,7 +21,7 @@ def run [max_retries: int] {
 
 def "main init" [] {
     run 99999
-    rc-service crond start
+    crond -f > /dev/stdout
 }
 
 def main [] {
